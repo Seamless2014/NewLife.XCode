@@ -146,7 +146,7 @@ public class Program
         DAL.SetConfig(config);
         //DAL.GetConfig = config.GetConfig;
 
-        XCode.Setting.Current.Migration = Migration.Full;
+        XCode.XCodeSetting.Current.Migration = Migration.Full;
         //Role.Meta.Session.Dal.Db.Migration = Migration.Full;
         //DAL.AddConnStr("membership", "Server=10.0.0.3;Port=3306;Database=Membership;Uid=root;Pwd=Pass@word;", null, "mysql");
 
@@ -236,7 +236,7 @@ public class Program
     /// <summary>测试序列化</summary>
     private static void Test12()
     {
-        var option = new BuilderOption();
+        var option = new EntityBuilderOption();
         var tables = ClassBuilder.LoadModels("../../NewLife.Cube/CubeDemoNC/Areas/School/Models/Model.xml", option, out var atts);
         EntityBuilder.BuildTables(tables, option);
     }

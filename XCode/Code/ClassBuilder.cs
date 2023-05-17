@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using NewLife;
 using NewLife.Collections;
 using NewLife.Log;
@@ -17,6 +12,7 @@ namespace XCode.Code;
 public class ClassBuilder
 {
     #region 属性
+
     /// <summary>写入器</summary>
     public TextWriter Writer { get; set; }
 
@@ -28,9 +24,11 @@ public class ClassBuilder
 
     /// <summary>生成器选项</summary>
     public BuilderOption Option { get; set; } = new BuilderOption();
-    #endregion
+
+    #endregion 属性
 
     #region 静态快速
+
     /// <summary>加载模型文件</summary>
     /// <param name="xmlFile">Xml模型文件</param>
     /// <param name="option">生成可选项</param>
@@ -48,6 +46,7 @@ public class ClassBuilder
 
         if (xmlFile.IsNullOrEmpty()) throw new Exception("找不到任何模型文件！");
 
+        var dir = Path.GetDirectoryName(xmlFile);
         xmlFile = xmlFile.GetBasePath();
         if (!File.Exists(xmlFile)) throw new FileNotFoundException("指定模型文件不存在！", xmlFile);
 
@@ -55,25 +54,60 @@ public class ClassBuilder
         var xmlContent = File.ReadAllText(xmlFile);
         atts = new NullableDictionary<String, String>(StringComparer.OrdinalIgnoreCase)
         {
-            ["xmlns"] = "https://newlifex.com/Model2022.xsd",
+            ["xmlns"] = "https://newlifex.com/Model2023.xsd",
             ["xmlns:xs"] = "http://www.w3.org/2001/XMLSchema-instance",
-            ["xs:schemaLocation"] = "https://newlifex.com https://newlifex.com/Model2022.xsd"
+            ["xs:schemaLocation"] = "https://newlifex.com https://newlifex.com/Model2023.xsd"
         };
 
         if (Debug) XTrace.WriteLine("导入模型：{0}", xmlFile);
 
         // 导入模型
-        var tables = ModelHelper.FromXml(xmlContent, DAL.CreateTable, atts);
+        var tables = ModelHelper.FromXml(xmlContent, DAL.CreateTable, option, atts);
 
         if (option != null)
         {
-            option.Output = atts["Output"] ?? Path.GetDirectoryName(xmlFile);
-            option.Namespace = atts["NameSpace"] ?? Path.GetFileNameWithoutExtension(xmlFile);
-            option.ConnName = atts["ConnName"];
-            option.DisplayName = atts["DisplayName"];
-            option.BaseClass = atts["BaseClass"];
+            //option.Output = atts["Output"] ?? Path.GetDirectoryName(xmlFile);
+            //option.Namespace = atts["NameSpace"] ?? Path.GetFileNameWithoutExtension(xmlFile);
+            //option.ConnName = atts["ConnName"];
+            //option.DisplayName = atts["DisplayName"];
+            //option.BaseClass = atts["BaseClass"];
+
+            //if (atts.TryGetValue("ExtendOnData", out var str) && !str.IsNullOrEmpty())
+            //    option.ExtendOnData = str.ToBoolean();
+
+            //if (atts.TryGetValue("ChineseFileName", out str) && !str.IsNullOrEmpty())
+            //    option.ChineseFileName = str.ToBoolean();
+            //if (atts.TryGetValue("CreateCustomBizFile", out str) && !str.IsNullOrEmpty())
+            //    option.CreateCustomBizFile = str.ToBoolean();
+            //if (atts.TryGetValue("OverwriteBizFile", out str) && !str.IsNullOrEmpty())
+            //    option.OverwriteBizFile = str.ToBoolean();
 
             option.Items = atts;
+
+            // 反射去掉option中已有设置，改用头部配置对象
+            foreach (var pi in option.GetType().GetProperties())
+            {
+                if (atts.TryGetValue(pi.Name, out var val))
+                {
+                    if (pi.PropertyType.IsEnum)
+                        option.SetValue(pi, Enum.Parse(pi.PropertyType, val, true));
+                    else
+                        option.SetValue(pi, val);
+                    atts.Remove(pi.Name);
+                }
+            }
+
+            // 去掉空属性
+            foreach (var item in atts.ToKeyArray())
+            {
+                if (atts.TryGetValue(item, out var val) && val.IsNullOrEmpty())
+                {
+                    atts.Remove(item);
+                }
+            }
+
+            if (option.Output.IsNullOrEmpty() && !dir.EqualIgnoreCase(".".GetBasePath())) option.Output = dir;
+            if (option.Namespace.IsNullOrEmpty()) option.Namespace = Path.GetFileNameWithoutExtension(xmlFile);
         }
 
         // 保存文件名
@@ -166,7 +200,8 @@ public class ClassBuilder
             builder.Load(item);
 
             // 自定义模型
-            var modelInterface = item.Properties["ModelInterface"];
+            //var modelInterface = item.Properties["ModelInterface"];
+            var modelInterface = option.ModelInterface;
             if (!modelInterface.IsNullOrEmpty()) builder.Option.ClassNameTemplate = modelInterface;
 
             builder.Execute();
@@ -177,9 +212,11 @@ public class ClassBuilder
 
         return count;
     }
-    #endregion
+
+    #endregion 静态快速
 
     #region 方法
+
     /// <summary>加载数据表</summary>
     /// <param name="table"></param>
     public virtual void Load(IDataTable table)
@@ -196,15 +233,16 @@ public class ClassBuilder
         str = table.Properties["Output"];
         if (!str.IsNullOrEmpty()) option.Output = str.GetBasePath();
     }
-    #endregion
+
+    #endregion 方法
 
     #region 主方法
+
     /// <summary>执行生成</summary>
     public virtual void Execute()
     {
         // 参数检查
-        var dt = Table;
-        if (dt == null) throw new ArgumentNullException(nameof(Table));
+        var dt = Table ?? throw new ArgumentNullException(nameof(Table));
         if (dt.Columns == null || dt.Columns.Count == 0) throw new ArgumentOutOfRangeException(nameof(Table));
 
         foreach (var dc in dt.Columns)
@@ -223,7 +261,7 @@ public class ClassBuilder
         WriteLog("生成 {0} {1} {2}", Table.Name, Table.DisplayName, new { option.ClassNameTemplate, option.BaseClass, option.ModelNameForCopy, option.Namespace }.ToJson(false, false, false));
 
         //Clear();
-        if (Writer == null) Writer = new StringWriter();
+        Writer ??= new StringWriter();
 
         OnExecuting();
 
@@ -237,7 +275,7 @@ public class ClassBuilder
     {
         // 引用命名空间
         var us = Option.Usings;
-        if (Option.Extend && !us.Contains("NewLife.Data")) us.Add("NewLife.Data");
+        if (Option.HasIModel && !us.Contains("NewLife.Data")) us.Add("NewLife.Data");
 
         us = us.Distinct().OrderBy(e => e.StartsWith("System") ? 0 : 1).ThenBy(e => e).ToArray();
         foreach (var item in us)
@@ -249,8 +287,9 @@ public class ClassBuilder
         var ns = Option.Namespace;
         if (!ns.IsNullOrEmpty())
         {
-            WriteLine("namespace {0}", ns);
-            WriteLine("{");
+            WriteLine("namespace {0};", ns);
+            WriteLine();
+            //WriteLine("{");
         }
 
         BuildClassHeader();
@@ -282,10 +321,10 @@ public class ClassBuilder
     protected virtual String GetBaseClass()
     {
         var baseClass = Option.BaseClass?.Replace("{name}", Table.Name);
-        if (Option.Extend)
+        if (Option.HasIModel)
         {
             if (!baseClass.IsNullOrEmpty()) baseClass += ", ";
-            baseClass += "IExtend";
+            baseClass += "IModel";
         }
 
         return baseClass;
@@ -318,10 +357,10 @@ public class ClassBuilder
         // 类接口
         WriteLine("}");
 
-        if (!Option.Namespace.IsNullOrEmpty())
-        {
-            Writer.Write("}");
-        }
+        //if (!Option.Namespace.IsNullOrEmpty())
+        //{
+        //    Writer.Write("}");
+        //}
     }
 
     /// <summary>生成主体</summary>
@@ -340,10 +379,10 @@ public class ClassBuilder
         }
         WriteLine("#endregion");
 
-        if (Option.Extend)
+        if (Option.HasIModel)
         {
             WriteLine();
-            BuildExtend();
+            BuildIndexItems();
         }
 
         // 生成拷贝函数。需要有基类
@@ -387,7 +426,7 @@ public class ClassBuilder
             WriteLine("public {0} {1} {{ get; set; }}", type, dc.Name);
     }
 
-    private void BuildExtend()
+    private void BuildIndexItems()
     {
         WriteLine("#region 获取/设置 字段值");
         WriteLine("/// <summary>获取/设置 字段值</summary>");
@@ -400,17 +439,18 @@ public class ClassBuilder
         WriteLine("get");
         WriteLine("{");
         {
-            WriteLine("switch (name)");
+            WriteLine("return name switch");
             WriteLine("{");
             foreach (var column in Table.Columns)
             {
                 // 跳过排除项
                 if (!ValidColumn(column)) continue;
 
-                WriteLine("case \"{0}\": return {0};", column.Name);
+                WriteLine("\"{0}\" => {0},", column.Name);
             }
-            WriteLine("default: throw new KeyNotFoundException($\"{name} not found\");");
-            WriteLine("}");
+            //WriteLine("default: throw new KeyNotFoundException($\"{name} not found\");");
+            WriteLine("_ => null");
+            WriteLine("};");
         }
         WriteLine("}");
 
@@ -433,7 +473,6 @@ public class ClassBuilder
                 {
                     if (!type.Contains("."))
                     {
-
                     }
                     if (!type.Contains(".") && conv.GetMethod("To" + type, new Type[] { typeof(Object) }) != null)
                     {
@@ -442,18 +481,23 @@ public class ClassBuilder
                             case "Int32":
                                 WriteLine("case \"{0}\": {0} = value.ToInt(); break;", column.Name);
                                 break;
+
                             case "Int64":
                                 WriteLine("case \"{0}\": {0} = value.ToLong(); break;", column.Name);
                                 break;
+
                             case "Double":
                                 WriteLine("case \"{0}\": {0} = value.ToDouble(); break;", column.Name);
                                 break;
+
                             case "Boolean":
                                 WriteLine("case \"{0}\": {0} = value.ToBoolean(); break;", column.Name);
                                 break;
+
                             case "DateTime":
                                 WriteLine("case \"{0}\": {0} = value.ToDateTime(); break;", column.Name);
                                 break;
+
                             default:
                                 WriteLine("case \"{0}\": {0} = Convert.To{1}(value); break;", column.Name, type);
                                 break;
@@ -478,7 +522,7 @@ public class ClassBuilder
                     }
                 }
             }
-            WriteLine("default: throw new KeyNotFoundException($\"{name} not found\");");
+            //WriteLine("default: throw new KeyNotFoundException($\"{name} not found\");");
             WriteLine("}");
         }
         WriteLine("}");
@@ -510,19 +554,21 @@ public class ClassBuilder
     /// <summary>生成实体转模型函数</summary>
     /// <param name="modelClass"></param>
     /// <param name="modelInterface"></param>
-    protected virtual void BuildEntityToModel(String modelClass, String modelInterface)
+    protected virtual void BuildToModel(String modelClass, String modelInterface)
     {
         WriteLine($"public {modelInterface} ToModel()");
         WriteLine("{");
         WriteLine($"var model = new {modelClass}();");
         WriteLine("model.Copy(this);");
         WriteLine("");
-        WriteLine(" return model;");
+        WriteLine("return model;");
         WriteLine("}");
     }
-    #endregion
+
+    #endregion 主方法
 
     #region 写入缩进方法
+
     private String _Indent;
 
     /// <summary>设置缩进</summary>
@@ -579,17 +625,17 @@ public class ClassBuilder
     /// <summary>输出结果</summary>
     /// <returns></returns>
     public override String ToString() => Writer.ToString();
-    #endregion
+
+    #endregion 写入缩进方法
 
     #region 保存
-    /// <summary>保存文件，返回文件路径</summary>
-    /// <param name="ext">扩展名，默认.cs</param>
-    /// <param name="overwrite">是否覆盖目标文件</param>
-    /// <param name="chineseFileName">是否使用中文名</param>
-    public virtual String Save(String ext = null, Boolean overwrite = true, Boolean chineseFileName = true)
+    /// <summary>获取文件名</summary>
+    /// <param name="ext"></param>
+    /// <param name="chineseFileName"></param>
+    /// <returns></returns>
+    protected virtual String GetFileName(String ext = null, Boolean chineseFileName = true)
     {
         var p = Option.Output;
-
         if (ext.IsNullOrEmpty())
             ext = ".cs";
         else if (!ext.Contains("."))
@@ -604,13 +650,26 @@ public class ClassBuilder
 
         p = p.GetBasePath();
 
+        return p;
+    }
+
+    /// <summary>保存文件，返回文件路径</summary>
+    /// <param name="ext">扩展名，默认.cs</param>
+    /// <param name="overwrite">是否覆盖目标文件</param>
+    /// <param name="chineseFileName">是否使用中文名</param>
+    public virtual String Save(String ext = null, Boolean overwrite = true, Boolean chineseFileName = true)
+    {
+        var p = GetFileName(ext, chineseFileName);
+
         if (!File.Exists(p) || overwrite) File.WriteAllText(p.EnsureDirectory(true), ToString(), Encoding.UTF8);
 
         return p;
     }
-    #endregion
+
+    #endregion 保存
 
     #region 辅助
+
     /// <summary>验证字段是否可用于生成</summary>
     /// <param name="column"></param>
     /// <param name="validModel"></param>
@@ -659,5 +718,6 @@ public class ClassBuilder
     /// <param name="format"></param>
     /// <param name="args"></param>
     public void WriteLog(String format, params Object[] args) => Log?.Info(format, args);
-    #endregion
+
+    #endregion 辅助
 }

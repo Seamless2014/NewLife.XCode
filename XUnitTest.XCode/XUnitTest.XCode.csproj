@@ -14,14 +14,22 @@
     <Compile Remove="Code\class_user_save.cs" />
     <Compile Remove="Code\Dtos\IUser.cs" />
     <Compile Remove="Code\Dtos\UserDto.cs" />
+    <Compile Remove="Code\EntityInterfaces\ILog.cs" />
     <Compile Remove="Code\EntityInterfaces\IUser.cs" />
+    <Compile Remove="Code\EntityModels\LogModel.cs" />
     <Compile Remove="Code\EntityModels\UserModel.cs" />
+    <Compile Remove="Code\Entity\日志.Biz.cs" />
+    <Compile Remove="Code\Entity\日志.cs" />
     <Compile Remove="Code\Entity\用户.Biz.cs" />
+    <Compile Remove="Code\Entity\用户.Biz2.cs" />
     <Compile Remove="Code\Entity\用户.cs" />
+    <Compile Remove="Code\entity_log_normal.cs" />
+    <Compile Remove="Code\entity_log_normal_biz.cs" />
     <Compile Remove="Code\entity_user_normal.cs" />
     <Compile Remove="Code\entity_user_normal_biz.cs" />
     <Compile Remove="Code\Models\IUserModel.cs" />
     <Compile Remove="Code\Models\UserModel.cs" />
+    <Compile Remove="DataAccessLayer\DAL_EnvironmentVariable.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Configuration\AreaX.sql" />
@@ -58,16 +66,37 @@
     <None Include="Code\Dtos\UserDto.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Code\EntityInterfaces\ILog.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Code\EntityInterfaces\IUser.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Code\EntityModels\LogModel.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Code\EntityModels\UserModel.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Code\Entity\日志.Biz.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Code\Entity\日志.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Code\Entity\用户.Biz2.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Code\Entity\用户.Biz.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Code\Entity\用户.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Code\entity_log_normal.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Code\entity_log_normal_biz.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Code\entity_user_normal_biz.cs">
@@ -87,10 +116,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
-    <PackageReference Include="NewLife.IP" Version="2.0.2023.203" />
-    <PackageReference Include="NewLife.UnitTest" Version="1.0.2022.901" />
+    <PackageReference Include="NewLife.IP" Version="2.0.2023.401" />
+    <PackageReference Include="NewLife.UnitTest" Version="1.0.2023.311-beta1027" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
